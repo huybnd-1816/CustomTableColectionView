@@ -8,13 +8,13 @@
 
 import Alamofire
 
-final class GetPhotosRequest: BaseRequest {
+final class GetJobsRequest: BaseRequest {
     
     required init(pageIndex: Int) {
         let parameters: [String: Any]  = [
             "page": pageIndex
         ]
         
-        super.init(url: Urls.basePath + "species", requestType: .get, parameters: parameters)
+        super.init(url: Urls.basePath + "positions.json", requestType: .get, parameters: parameters)
     }
 }

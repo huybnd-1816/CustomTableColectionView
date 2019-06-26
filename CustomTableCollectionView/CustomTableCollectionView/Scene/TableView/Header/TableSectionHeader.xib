@@ -22,8 +22,11 @@
                     <nil key="textColor"/>
                     <nil key="highlightedColor"/>
                 </label>
-                <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="roundedRect" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="HJ3-Ne-JCX">
-                    <rect key="frame" x="328" y="37.5" width="131" height="30"/>
+                <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="roundedRect" lineBreakMode="wordWrap" translatesAutoresizingMaskIntoConstraints="NO" id="HJ3-Ne-JCX">
+                    <rect key="frame" x="395" y="37.5" width="64" height="30"/>
+                    <constraints>
+                        <constraint firstAttribute="width" constant="64" id="sbt-ul-rC2"/>
+                    </constraints>
                     <state key="normal" title="Button"/>
                     <connections>
                         <action selector="handleCollapseButtonTapped:" destination="-2" eventType="touchUpInside" id="YD5-6T-hKw"/>
@@ -33,7 +36,7 @@
             <constraints>
                 <constraint firstItem="vUN-kp-3ea" firstAttribute="trailing" secondItem="HJ3-Ne-JCX" secondAttribute="trailing" constant="16" id="Fhh-nF-vq7"/>
                 <constraint firstItem="HJ3-Ne-JCX" firstAttribute="centerY" secondItem="vUN-kp-3ea" secondAttribute="centerY" id="RFF-2x-0Lt"/>
-                <constraint firstItem="HJ3-Ne-JCX" firstAttribute="leading" relation="lessThanOrEqual" secondItem="smn-8d-pCJ" secondAttribute="trailing" constant="270" id="Vhy-Ba-Spo"/>
+                <constraint firstItem="HJ3-Ne-JCX" firstAttribute="leading" relation="greaterThanOrEqual" secondItem="smn-8d-pCJ" secondAttribute="trailing" constant="270" id="Vhy-Ba-Spo"/>
                 <constraint firstItem="smn-8d-pCJ" firstAttribute="leading" secondItem="vUN-kp-3ea" secondAttribute="leading" constant="16" id="eFa-rn-imO"/>
                 <constraint firstItem="smn-8d-pCJ" firstAttribute="centerY" secondItem="vUN-kp-3ea" secondAttribute="centerY" id="qG7-ie-3YW"/>
             </constraints>

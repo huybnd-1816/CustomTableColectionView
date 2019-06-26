@@ -8,8 +8,8 @@
 
 import Foundation
 
-struct SpeciesSection {
+struct JobsSection {
     var headerTitle: String
     var isExpanded: Bool
-    var species: [Results]
+    var jobs: [Job]
 }
