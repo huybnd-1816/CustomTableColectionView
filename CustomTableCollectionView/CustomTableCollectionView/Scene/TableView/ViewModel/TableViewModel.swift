@@ -6,61 +6,111 @@
 //  Copyright © 2019 nguyen.duc.huyb. All rights reserved.
 //
 
-enum RefreshType {
-    case topSpinner(Bool)
-    case bottomSpinner(Bool)
+import UIKit
+import Foundation
+
+final class TableViewModel: BaseViewModel {
+    override init() {
+        super.init()
+        reloadData()
+    }
 }
 
-class TableViewModel: BaseViewModel {
-    private let repoRepository = SpeciesRepositoryImpl(api: APIService.shared)
+extension TableViewModel: UITableViewDelegate {
     
-    var speciesData: [SpeciesSection] = [] {
-        didSet {
-            self.didChange?(.success)
+    // HeaderViewCell
+    func tableView(_ tableView: UITableView, viewForHeaderInSection section: Int) -> UIView? {
+        let cell = tableView.dequeueReusableHeaderFooterView(withIdentifier: "TableSectionHeader")
+        let headerCell = cell as! TableSectionHeader
+        headerCell.delegate = self
+        headerCell.secIndex = section
+        headerCell.contentView.backgroundColor = .cyan
+        headerCell.configTableHeader(jobsSection[section].headerTitle)
+        headerCell.collapseButton.setTitle(jobsSection[section].isExpanded ? "Collapse" : "Show", for: .normal)
+        
+        return headerCell
+    }
+    
+    func tableView(_ tableView: UITableView, heightForHeaderInSection section: Int) -> CGFloat {
+        return 40
+    }
+    
+    // FooterViewCell
+    func tableView(_ tableView: UITableView, viewForFooterInSection section: Int) -> UIView? {
+        return bottomSpinner
+    }
+    
+//    func tableView(_ tableView: UITableView, heightForFooterInSection section: Int) -> CGFloat {
+//        if bottomSpinner.isAnimating {
+//            return 44
+//        } else {
+//             return 0
+//        }
+//    }
+}
+
+extension TableViewModel: UITableViewDataSource {
+    func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
+        if jobsSection[section].isExpanded {
+            return jobsSection[section].jobs.count
+        } else {
+            return 0
         }
     }
     
-    private var didChange: ((Result) -> Void)?
-    var didFinishRefreshing: ((RefreshType) -> Void)?
-    
-    func bind(didChange: @escaping (Result) -> Void) {
-        self.didChange = didChange
+    func numberOfSections(in tableView: UITableView) -> Int {
+        return jobsSection.count
     }
     
-    func reloadData() {
-        didFinishRefreshing?(.topSpinner(false))
-        repoRepository.fetchSpecies(pageIndex: 1) { [weak self] result in
-            guard let self = self else { return }
-            self.didFinishRefreshing?(.topSpinner(true))
-            
-            switch result {
-            case .success(let response):
-                guard let data = response?.results else { return }
-                
-                self.speciesData.removeAll()
-                let item = SpeciesSection(headerTitle: "Header", isExpanded: true, species: data)
-                self.speciesData.append(item)
-            case .failure(let error):
-                self.didChange?(.failure(error: error!))
+    func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
+        let cell = tableView.dequeueReusableCell(withIdentifier: "TableCell", for: indexPath) as! TableViewCell
+        let data = jobsSection[indexPath.section].jobs[indexPath.row]
+        cell.configCell(data)
+        return cell
+    }
+    
+    // Move cell
+    func tableView(_ tableView: UITableView, canMoveRowAt indexPath: IndexPath) -> Bool {
+        return true
+    }
+    
+    func tableView(_ tableView: UITableView, moveRowAt sourceIndexPath: IndexPath, to destinationIndexPath: IndexPath) {
+        let item = jobsSection[sourceIndexPath.section].jobs[sourceIndexPath.row]
+        jobsSection[sourceIndexPath.section].jobs.remove(at: sourceIndexPath.row)
+        jobsSection[destinationIndexPath.section].jobs.insert(item, at: destinationIndexPath.row)
+    }
+}
+
+extension TableViewModel: TableHeaderDelegate {
+    func callHeader(_ index: Int) {
+        // Implement collapse selected section
+        let isExpanded = jobsSection[index].isExpanded
+        jobsSection[index].isExpanded = !isExpanded
+        
+        reloadSections?(index)
+    }
+}
+
+extension TableViewModel {
+    // Loadmore
+    func scrollViewDidEndDragging(_ scrollView: UIScrollView, willDecelerate decelerate: Bool) {
+        
+        // If section is not expand -> no loadmore
+        guard jobsSection.first?.isExpanded == true else { return }
+        
+        if scrollView.contentOffset.y >= (scrollView.contentSize.height - scrollView.frame.size.height) {
+            if numberOfPages < 4 {
+                numberOfPages += 1
+                loadMore(numberOfPages)
+            } else {
+                bottomSpinner.stopAnimating()
             }
         }
     }
     
-    func loadMore(_ pageIndex: Int) {
-        didFinishRefreshing?(.bottomSpinner(false))
-        repoRepository.fetchSpecies(pageIndex: pageIndex) { [weak self] result in
-            guard let self = self else { return }
-            self.didFinishRefreshing?(.bottomSpinner(true))
-            
-            switch result {
-            case .success(let response):
-                guard let data = response?.results else { return }
-                data.forEach {
-                    self.speciesData[0].species.append($0)
-                }
-            case .failure(let error):
-                self.didChange?(.failure(error: error!))
-            }
+    func scrollViewDidScroll(_ scrollView: UIScrollView) {
+        if scrollView.contentOffset.y < (scrollView.contentSize.height - scrollView.frame.size.height) {
+            bottomSpinner.stopAnimating()
         }
     }
 }

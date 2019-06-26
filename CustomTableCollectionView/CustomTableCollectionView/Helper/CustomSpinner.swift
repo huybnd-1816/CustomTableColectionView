@@ -17,6 +17,7 @@ final class CustomSpinner: UIActivityIndicatorView {
     func setupView() {
         self.style = .gray
         self.stopAnimating()
+        self.hidesWhenStopped = true
         self.frame = CGRect(x: 0, y: 0, width: UIScreen.main.bounds.width, height: CGFloat(44))
     }
     
