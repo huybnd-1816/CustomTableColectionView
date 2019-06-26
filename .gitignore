@@ -66,6 +66,5 @@ fastlane/report.xml
 fastlane/Preview.html
 fastlane/screenshots/**/*.png
 fastlane/test_output
-CustomTableCollectionView/Pods/
-CustomTableCollectionView/CustomTableCollectionView/Data/Remote/API/APIUrl.swift
+Pods/
 .DS_Store

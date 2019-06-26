@@ -9,13 +9,11 @@
 import UIKit
 
 final class TableViewController: UIViewController {
-    @IBOutlet private weak var speciesTableView: UITableView!
-    @IBOutlet weak var editButton: UIBarButtonItem!
+    @IBOutlet private weak var jobsTableView: UITableView!
+    @IBOutlet private weak var editButton: UIBarButtonItem!
     
     private let refreshControl = UIRefreshControl()
-    private var vm: TableViewModel!
-    private var bottomSpinner = CustomSpinner(frame: CGRect.zero)
-    private var numberOfPages = 1
+    private let viewModel = TableViewModel()
     
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -26,58 +24,61 @@ final class TableViewController: UIViewController {
     
     private func config() {
         navigationItem.title = "Table View"
-        vm = TableViewModel()
-        vm.reloadData()
+        editButton.isEnabled = false
         
-        vm.bind { [weak self] result in
+        // Update view when reload data
+        viewModel.didUpdateView = { [weak self] result in
             guard let self = self else { return }
             switch result {
             case .success:
-                self.speciesTableView.reloadData()
+                self.editButton.isEnabled = true
+                self.jobsTableView.reloadData()
             case .failure(let error):
                 self.showAlert(message: error.errorMessage ?? "Error")
             }
         }
         
-        vm.didFinishRefreshing = { [weak self] result in
+        // Show/Hide refresh control when pull to refresh
+        viewModel.didFinishRefreshing = { [weak self] result in
             guard let self = self else { return }
-            
-            switch result {
-            case .topSpinner(let isRefreshing):
-                if isRefreshing {
-                    self.refreshControl.endRefreshing()
-                } else {
-                    self.refreshControl.beginRefreshing()
-                }
-            case .bottomSpinner(let isRefreshing):
-                if isRefreshing {
-                    self.bottomSpinner.stopAnimating()
-                } else {
-                    self.bottomSpinner.startAnimating()
-                }
+    
+            if result {
+                self.refreshControl.endRefreshing()
+            } else {
+                self.refreshControl.beginRefreshing()
             }
+        }
+        
+        // Show/Collapse rows in section
+        viewModel.reloadSections = { [weak self] sectionIndex in
+            guard let self = self else { return }
+            let indexPaths = self.jobsTableView.indexPathsForVisibleRows
+            self.jobsTableView.reloadRows(at: indexPaths!, with: .automatic)
+            
+            // If there are no visible cells then cannot editing
+            self.editButton.isEnabled = indexPaths?.count == 0 ? false : true
         }
     }
     
     private func setupTableView() {
-//        speciesTableView.register(UINib(nibName: "HeaderTableCell", bundle: nil), forCellReuseIdentifier: "HeaderCell")
-        speciesTableView.register(UINib(nibName: "TableViewCell", bundle: nil), forCellReuseIdentifier: "TableCell")
-        speciesTableView.tableFooterView = UIView(frame: .zero)
+        jobsTableView.delegate = viewModel
+        jobsTableView.dataSource = viewModel
         
-        let nib = UINib(nibName: "TableSectionHeader", bundle: nil)
-        speciesTableView.register(nib, forHeaderFooterViewReuseIdentifier: "TableSectionHeader")
+        jobsTableView.register(UINib(nibName: "TableSectionHeader", bundle: nil), forHeaderFooterViewReuseIdentifier: "TableSectionHeader")
+        jobsTableView.register(UINib(nibName: "TableViewCell", bundle: nil), forCellReuseIdentifier: "TableCell")
+        jobsTableView.tableFooterView = UIView(frame: .zero)
         
         // Table Cell Sizing
-        speciesTableView.estimatedRowHeight = 45
-        speciesTableView.rowHeight = UITableView.automaticDimension
+        jobsTableView.estimatedRowHeight = 45
+        jobsTableView.rowHeight = UITableView.automaticDimension
     }
     
     private func setupRefreshControl() {
         // Add Refresh Control to Table View
         if #available(iOS 10.0, *) {
-            speciesTableView.refreshControl = refreshControl
+            jobsTableView.refreshControl = refreshControl
         } else {
-            speciesTableView.insertSubview(refreshControl, at: 0)
+            jobsTableView.insertSubview(refreshControl, at: 0)
         }
         
         // Configure Refresh Control
@@ -88,109 +89,11 @@ final class TableViewController: UIViewController {
     
     @objc
     private func refreshData(_ sender: Any) {
-        vm.reloadData()
+        viewModel.reloadData()
     }
     
     @IBAction func handleEditButtonTapped(_ sender: Any) {
-        speciesTableView.isEditing = !speciesTableView.isEditing
-        print(speciesTableView.isEditing)
-        editButton.title = speciesTableView.isEditing ? "Done" : "Edit"
-    }
-}
-
-extension TableViewController: UITableViewDelegate, UITableViewDataSource {
-    func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-        if vm.speciesData[section].isExpanded {
-            return vm.speciesData[section].species.count
-        } else {
-            return 0
-        }
-    }
-    
-    func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
-        let cell = tableView.dequeueReusableCell(withIdentifier: "TableCell", for: indexPath) as! TableViewCell
-        let data = vm.speciesData[indexPath.section].species[indexPath.row]
-        cell.configCell(data)
-        return cell
-    }
-    
-    func tableView(_ tableView: UITableView, heightForRowAt indexPath: IndexPath) -> CGFloat {
-        if vm.speciesData[indexPath.section].isExpanded {
-            return UITableView.automaticDimension
-        } else {
-            return 0
-        }
-    }
-    
-    func numberOfSections(in tableView: UITableView) -> Int {
-        return vm.speciesData.count
-    }
-    
-    func tableView(_ tableView: UITableView, heightForHeaderInSection section: Int) -> CGFloat {
-        return 40
-    }
-    
-    // HeaderViewCell
-    
-    func tableView(_ tableView: UITableView, viewForHeaderInSection section: Int) -> UIView? {
-        let cell = speciesTableView.dequeueReusableHeaderFooterView(withIdentifier: "TableSectionHeader")
-        let headerCell = cell as! TableSectionHeader
-        headerCell.delegate = self
-        headerCell.secIndex = section
-        headerCell.contentView.backgroundColor = .cyan
-        headerCell.configHeader(vm.speciesData[section].headerTitle)
-        headerCell.collapseButton.setTitle(vm.speciesData[section].isExpanded ? "Collapse" : "Show", for: .normal)
-        
-        return headerCell
-    }
-    
-    // FooterViewCell
-    
-    func tableView(_ tableView: UITableView, viewForFooterInSection section: Int) -> UIView? {
-        return bottomSpinner
-    }
-    
-    func tableView(_ tableView: UITableView, heightForFooterInSection section: Int) -> CGFloat {
-        return 40.0
-    }
-    
-    func scrollViewDidEndDragging(_ scrollView: UIScrollView, willDecelerate decelerate: Bool) {
-        if speciesTableView.contentOffset.y >= (speciesTableView.contentSize.height - speciesTableView.frame.size.height + 64) {
-            //you reached the bottom of tableview, you can append the other 10 numbers to array and do reload
-            if numberOfPages < 4 {
-                numberOfPages += 1
-                loadMoreData(numOfPages: numberOfPages)
-            } else {
-                bottomSpinner.stopAnimating()
-            }
-        }
-    }
-    
-    func tableView(_ tableView: UITableView, canMoveRowAt indexPath: IndexPath) -> Bool {
-        return true
-    }
-    
-    func tableView(_ tableView: UITableView, moveRowAt sourceIndexPath: IndexPath, to destinationIndexPath: IndexPath) {
-        let item = vm.speciesData[sourceIndexPath.section].species[sourceIndexPath.row]
-        vm.speciesData[sourceIndexPath.section].species.remove(at: sourceIndexPath.row)
-        vm.speciesData[sourceIndexPath.section].species.insert(item, at: destinationIndexPath.row)
-    }
-}
-
-extension TableViewController {
-    func loadMoreData(numOfPages: Int) {
-        bottomSpinner.startAnimating()
-        vm.loadMore(numOfPages)
-    }
-}
-
-extension TableViewController: HeaderDelegate {
-    func callHeader(_ index: Int) {
-        // Implement collapse section
-        let isExpanded = self.vm.speciesData[index].isExpanded
-        vm.speciesData[index].isExpanded = !isExpanded
-        
-        let indexPaths = self.speciesTableView.indexPathsForVisibleRows
-        self.speciesTableView.reloadRows(at: indexPaths!, with: .automatic)
+        jobsTableView.isEditing = !jobsTableView.isEditing
+        editButton.title = jobsTableView.isEditing ? "Done" : "Edit"
     }
 }

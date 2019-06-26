@@ -6,11 +6,13 @@
 //  Copyright © 2019 nguyen.duc.huyb. All rights reserved.
 //
 
-protocol SpeciesRepository {
-    func fetchSpecies(pageIndex: Int, completion: @escaping (BaseResult<GetSpeciesResponse>) -> Void)
+protocol JobsRepository {
+    func fetchJobs(pageIndex: Int, completion: @escaping (BaseResult<[Job]>) -> Void)
 }
 
-final class SpeciesRepositoryImpl: SpeciesRepository {
+final class JobsRepositoryImpl: JobsRepository {
+    
+    private var isCallingRequest: Bool = false
     
     private var api: APIService?
     
@@ -18,10 +20,15 @@ final class SpeciesRepositoryImpl: SpeciesRepository {
         self.api = api
     }
     
-    func fetchSpecies(pageIndex: Int, completion: @escaping (BaseResult<GetSpeciesResponse>) -> Void) {
-        let input = GetPhotosRequest(pageIndex: pageIndex)
+    func fetchJobs(pageIndex: Int, completion: @escaping (BaseResult<[Job]>) -> Void) {
+        let input = GetJobsRequest(pageIndex: pageIndex)
         
-        api?.request(input: input) { (object: GetSpeciesResponse?, error) in
+        guard !isCallingRequest else { return }
+        
+        isCallingRequest = true
+        api?.request(input: input) { (object: [Job]?, error) in
+            self.isCallingRequest = false
+            
             if let object = object {
                 completion(.success(object))
             } else if let error = error {
